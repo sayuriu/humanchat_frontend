@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 class FormInputField extends StatefulWidget {
@@ -7,10 +9,11 @@ class FormInputField extends StatefulWidget {
   final String? description;
   late final String initialText;
   final bool isPassword;
-  final String? Function(String)? validator;
+  final FutureOr<String?> Function(String)? validator;
   late final Icon? icon;
   late final OutlineInputBorder border;
   late final OutlineInputBorder errorBorder;
+  late final String? errorMessage;
   final bool disabled;
 
   FormInputField({
@@ -24,6 +27,7 @@ class FormInputField extends StatefulWidget {
     this.description,
     this.validator,
     this.disabled = false,
+    this.errorMessage,
     this.isPassword = false,
   }) {
     this.border = border ?? OutlineInputBorder(
@@ -49,18 +53,21 @@ class _FormInputFieldState extends State<FormInputField> {
     controller.text = widget.initialText;
     if (widget.validator == null) return;
     controller.addListener(() {
-      setState(() {
-        _errorMessage = widget.validator!(controller.text);
+      Future(() => widget.validator!(controller.text)).then((value) {
+        setState(() {
+          _errorMessage = value;
+        });
       });
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    var hasError = (widget.errorMessage ?? _errorMessage) != null;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOutCubicEmphasized,
-      margin: EdgeInsets.only(bottom: _errorMessage != null ? 8 : 0),
+      margin: EdgeInsets.only(bottom: hasError ? 8 : 0),
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -76,12 +83,12 @@ class _FormInputFieldState extends State<FormInputField> {
           counterText: widget.description,
           icon: widget.icon != null ? Icon(
             widget.icon!.icon,
-            color: _errorMessage != null ? Colors.red : null,
+            color: hasError ? Colors.red : null,
           ) : null,
           border: widget.border,
           labelText: widget.label,
           errorBorder: widget.errorBorder,
-          errorText: _errorMessage,
+          errorText: widget.errorMessage ?? _errorMessage,
         ),
         // Text field is password
         obscureText: widget.isPassword,

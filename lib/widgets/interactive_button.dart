@@ -27,7 +27,7 @@ class InteractiveButton extends StatefulWidget {
     this.reactiveBorder = false,
     this.borderThickness = 0,
     this.disabled = false,
-    this.textColor = Colors.white,
+    this.textColor,
   });
   @override
   State<InteractiveButton> createState() => _InteractiveButtonState();
@@ -58,9 +58,8 @@ class _InteractiveButtonState extends State<InteractiveButton> {
     var bgColor = widget.backgroundColor ?? Colors.white;
     var fgColor = widget.textColor ?? Theme.of(context).colorScheme.primary;
     var overlayColor = (widget.backgroundHoverColor ?? fgColor).withOpacity(0.02);
-
     var shouldDisplayBorder = widget.reactiveBorder && (hover || active) || widget.borderThickness > 0;
-
+    double paddingWidth = !widget.disabled ? active ? 32 : hover ? 28 : 24 : 24;
     return AnimatedContainer(
       duration: duration,
       curve: Curves.easeInOutCubicEmphasized,
@@ -88,7 +87,7 @@ class _InteractiveButtonState extends State<InteractiveButton> {
           ),
         ),
         child: AnimatedPadding(
-          padding: EdgeInsets.symmetric(horizontal: active ? 32 : hover ? 28 : 24),
+          padding: EdgeInsets.symmetric(horizontal: paddingWidth),
           duration: duration,
           curve: Curves.easeInOutCubicEmphasized,
           child: Row(

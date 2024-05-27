@@ -1,19 +1,26 @@
 import 'package:get/get.dart';
 import 'package:humanchat_frontend/core/api.dart';
 import 'package:humanchat_frontend/service/cache_service.dart';
+import 'package:humanchat_frontend/utils/throw_error.dart';
 
 class _AuthConnect extends GetConnect {
   final cacheService = Get.put(CacheService());
+
+  Future<bool> checkEmail({required String email}) async {
+    final res = await post(AuthEndpoint.checkEmail.value, {
+      'email': email
+    });
+    hasError(res);
+    return res.body['exists'];
+  }
 
   Future<String> login({required String email, required String password}) async {
     final res = await post(AuthEndpoint.login.value, {
       'email': email,
       'password': password
     });
-    if (res.hasError) {
-      throw Exception(res.statusText);
-    }
-    return res.body['accessToken'].split(' ')[1];
+    hasError(res);
+    return res.body['accessToken'];
   }
 
   Future<String> signUp({required String email, required String username, required String password, String? displayName,}) async {
@@ -23,9 +30,7 @@ class _AuthConnect extends GetConnect {
       'password': password,
       'displayName': displayName
     });
-    if (res.hasError) {
-      throw Exception(res.statusText);
-    }
+    hasError(res);
     return res.body['message'];
   }
 
@@ -41,6 +46,14 @@ class AuthController extends GetxController {
   final _authConnect = _AuthConnect();
   final _cacheService = Get.put(CacheService());
 
+  Future<bool> checkEmail({required String email}) async {
+    try {
+      return await _authConnect.checkEmail(email: email);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> login({required String email, required String password}) async {
     try {
       _cacheService.token = await _authConnect.login(email: email, password: password);
@@ -55,7 +68,6 @@ class AuthController extends GetxController {
     } catch (e) {
       rethrow;
     }
-
   }
 
   Future<void> logout() async {

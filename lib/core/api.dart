@@ -19,7 +19,8 @@ class Endpoint {
 class AuthEndpoint {
   static final login = Pair(HttpMethods.POST, '${Endpoint.apiEndpoint}/login');
   static final logout = Pair(HttpMethods.POST, '${Endpoint.apiEndpoint}/logout');
-  static final signUp = Pair(HttpMethods.POST, '${Endpoint.apiEndpoint}/register');
+  static final signUp = Pair(HttpMethods.POST, '${Endpoint.apiEndpoint}/signup');
+  static final checkEmail = Pair(HttpMethods.POST, '${Endpoint.apiEndpoint}/check-email');
 }
 
 class UserEndpoint {

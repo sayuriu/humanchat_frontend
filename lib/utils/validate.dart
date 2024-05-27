@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 
 String? validateEmail(String email) {
@@ -18,10 +20,20 @@ String? validatePassword(String password) {
   return null;
 }
 
-T? Function(T) validateWithReactive<T>(RxBool reactiveState, T? Function(T) validator) {
-  return (T value) {
+String? validateUsername(String username) {
+  if (username.isEmpty) {
+    return 'Username is required';
+  }
+  if (!GetUtils.isUsername(username)) {
+    return 'Invalid username';
+  }
+  return null;
+}
+
+Future<T?> Function(T)?  validateWithReactive<T>(RxBool reactiveState, FutureOr<T?> Function(T) validator) {
+  return (T value) async {
     reactiveState.value = false;
-    final result = validator(value);
+    final result = await validator(value);
     reactiveState.value = result == null;
     return result;
   };
