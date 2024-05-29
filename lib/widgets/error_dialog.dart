@@ -3,11 +3,11 @@ import 'package:gap/gap.dart';
 
 class ErrorDialog extends StatelessWidget {
   final String? message;
-  final Function? onRetry;
+  final Function? onConfirm;
 
   final String? additionalInformation;
 
-  const ErrorDialog({super.key, this.message, this.additionalInformation, this.onRetry});
+  const ErrorDialog({super.key, this.message, this.additionalInformation, this.onConfirm});
 
   @override
   Widget build(BuildContext context) {
@@ -30,11 +30,12 @@ class ErrorDialog extends StatelessWidget {
         TextButton(
           onPressed: () {
             Navigator.of(context).pop();
-            if (onRetry != null) onRetry!();
+            if (onConfirm != null) onConfirm!();
           },
           child: const Text('OK'),
         ),
       ],
+
     );
   }
 }

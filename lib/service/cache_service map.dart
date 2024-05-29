@@ -18,18 +18,20 @@ class CacheService extends GetxService {
   /// store messages box belong to a channel a.k.a key
   /// Box<K,V>: K: ChannelId.toString(), V: Map<MessageId.toString(), Message>
   // late final Box<Map<String, Message>> messagesBoxs;
+  late final Box<dynamic> messagesBoxs;
 
   /// Box(Key: ChannelId.toString(), Value: MessageId.toString())
   late final Box<String> channelMessagesBox;
 
-  final messageBoxInstances = <String, Box<Message>>{};
+  // final messageBoxInstances = <String, Box<Map<String, Message>>>{};
+  final messageBoxInstances = <String, dynamic>{};
 
   /// get all users
-  var users = <User>[].obs;
+  var users = RxMap<String, User>();
   /// get all channels
-  var channels =  <Channel>[].obs;
+  var channels = RxMap<String, Channel>();
   /// get all messages <ChannelId, Map<MessageId, Message>>
-  var messages = <String, List<Message>>{}.obs;
+  var messages = RxMap<String, RxMap<String, Message>>();
 
   final latestMessages = RxMap<String, Message?>();
 
@@ -58,33 +60,34 @@ class CacheService extends GetxService {
   }
 
   initAndWatchObs() {
-    users.assignAll(usersBox.values);
+    users.assignAll(Map.from(usersBox.toMap()));
     usersBox.watch().listen((event) {
-      users.assignAll(usersBox.values);
+      users.assignAll(Map.from(usersBox.toMap()) );
       log("In cache: User updated: $users");
     });
-    channels.assignAll(channelsBox.values);
+    channels.assignAll(Map<String, Channel>.from(channelsBox.toMap()));
     channelsBox.watch().listen((event) {
-      channels.assignAll(channelsBox.values);
+      channels.assignAll(Map.from(channelsBox.toMap()) );
       log("In cache: Channel updated: $channels");
     });
   }
 
   // Future<Box<Map<String, Message>>> openMessagesBoxByChannelId({required String channelId}) async {
   Future<Box> openMessagesBoxByChannelId({required String channelId}) async {
-    messageBoxInstances[channelId] = await Hive.openBox<Message>('messages$channelId');
+    // messageBoxInstances[channelId.toString()] = await Hive.openBox<Map<String, Message>>('messages$channelId');
+    messageBoxInstances[channelId.toString()] = await Hive.openBox<dynamic>('messages$channelId');
+    // Map<String, RxMap<String, Message>> _messages = messageBoxInstances[channelId.toString()]!.values.toList().map((e) => RxMap<String, Message>.from(e)).toList().asMap().map((key, value) => MapEntry(key.toString(), value));
     messages.clear();
-    messages[channelId] = messageBoxInstances[channelId]!.values.toList();
+    // messages.addAll(_messages);
+    messages.addAll(messageBoxInstances[channelId.toString()]!);
     // messages.assignAll(_messages);
-    latestMessages[channelId] = messages[channelId]!.lastOrNull;
-    messageBoxInstances[channelId]!.watch().listen((event) {
-      messages[channelId] = messageBoxInstances[channelId]!.values.toList();
-      latestMessages[channelId] = messages[channelId]!.lastOrNull;
+    latestMessages[channelId] = messages[channelId]?.entries.last.value;
+    messageBoxInstances[channelId.toString()]!.watch().listen((event) {
+      // messages.assignAll(Map.from(messageBoxInstances[channelId.toString()]!.toMap()) );
+      messages.assignAll(messageBoxInstances[channelId.toString()]);
       log("In cache: Message updated: $messages");
-      log("In cache: Latest message updated: ${latestMessages[channelId]}");
-    // messages.assignAll(_messages);
     });
-    return messageBoxInstances[channelId]!;
+    return messageBoxInstances[channelId.toString()]!;
   }
 
   Future<void> handleMessage({required GetMessageDto dto}) async {
@@ -94,12 +97,15 @@ class CacheService extends GetxService {
     final id = dto.messageId.toString();
     messageBoxInstances[dto.channelId.toString()]!.put(
       id,
+      <String, Message>{
+        id :
         Message(
           messageId: dto.messageId,
           author: dto.authorId,
           channel: dto.channelId,
           content: dto.content
         )
+      }
     );
     // TODO optimize messages only take a certain amount
   }
@@ -111,9 +117,4 @@ class CacheService extends GetxService {
   Future<void> close() async {
     await Hive.close();
   }
-  String get accountId => _authBox.get('accountId') ?? '';
-  set accountId (String value) => _authBox.put('accountId', value);
-  deleteAccountId () => _authBox.delete('accountId');
 }
-
-

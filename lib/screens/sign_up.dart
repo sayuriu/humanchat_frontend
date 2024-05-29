@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:get/get.dart';
 import 'package:humanchat_frontend/controller/auth_controller.dart';
-import 'package:humanchat_frontend/screens/go.dart';
+import 'package:humanchat_frontend/utils/go.dart';
 import 'package:humanchat_frontend/screens/sign_up_the_sequel.dart';
 import 'package:humanchat_frontend/screens/welcome.dart';
 import 'package:humanchat_frontend/states/sign_up_state.dart';
 import 'package:humanchat_frontend/utils/debounce.dart';
+import 'package:humanchat_frontend/utils/exceptions/response_exception.dart';
+import 'package:humanchat_frontend/utils/response_error.dart';
 import 'package:humanchat_frontend/utils/validate.dart';
+import 'package:humanchat_frontend/widgets/error_dialog.dart';
 import 'package:humanchat_frontend/widgets/form_input_field.dart';
 import 'package:humanchat_frontend/widgets/interactive_button.dart';
 import 'package:humanchat_frontend/widgets/title.dart';
@@ -19,35 +22,46 @@ class SignUpScreen extends StatelessWidget {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  final immediateEmailErrorMessage = ''.obs;
+  final immediateEmailErrorMessage = RxnString();
   final emailValid = false.obs;
   final passwordValid = false.obs;
   final confirmPasswordValid = false.obs;
   final checking = false.obs;
+  get _canContinue => emailValid.value && passwordValid.value && confirmPasswordValid.value;
 
   final Debounce _debounce = Debounce(debounceTimeMillis: 500);
+  final emailFocusNode = FocusNode();
+  final lastEmailInput = ''.obs;
 
   SignUpScreen({super.key});
 
   String? checkEmailEx(String email) {
-    immediateEmailErrorMessage.value = '';
+    if (email == lastEmailInput.value) {
+      return null;
+    }
+    immediateEmailErrorMessage.value = null;
+    lastEmailInput.value = email;
     return validateEmail(email);
   }
-
-  get _canContinue => emailValid.value && passwordValid.value && confirmPasswordValid.value;
 
   void _signUp() async {
     if (!_canContinue) return;
     checking.value = true;
-    final exists = await _debounce.execute(
+    try {
+      final exists = await _debounce.execute(
         () => _authController.checkEmail(email: _emailController.text)
       );
-    checking.value = false;
-    if (exists == true) {
-      immediateEmailErrorMessage.value = 'Email already exists';
-      return;
+      checking.value = false;
+      if (exists) {
+        immediateEmailErrorMessage.value = 'Email already exists';
+        emailValid.value = false;
+        emailFocusNode.requestFocus();
+        return;
+      }
+    } on ResponseException catch (e) {
+      handleResponseError(e);
     }
-    _signUpState.setEmailPassword(email: _emailController.text, password: _passwordController.text);
+    _signUpState.setLoginInformation(email: _emailController.text, password: _passwordController.text);
     Go.to(() => SignUpScreenTheSequel());
   }
 
@@ -96,9 +110,10 @@ class SignUpScreen extends StatelessWidget {
                 controller: _emailController,
                 label: 'Email',
                 icon: const Icon(Icons.email_outlined),
+                focusNode: emailFocusNode,
                 // description: '',
                 validator:  validateWithReactive(emailValid, checkEmailEx),
-                errorMessage: immediateEmailErrorMessage.value.isEmpty ? null : immediateEmailErrorMessage.value,
+                errorMessage: immediateEmailErrorMessage.value,
               )),
               FormInputField(
                   controller: _passwordController,
@@ -129,7 +144,7 @@ class SignUpScreen extends StatelessWidget {
               const Text('Have an account?'),
               const Gap(4),
               InteractiveButton(
-                onPressed: () => Go.off(() => WelcomeScreen()),
+                onPressed: () => Go.offUntil(() => WelcomeScreen()),
                 label: 'Login',
                 reactiveBorder: true,
                 textColor: Theme.of(context).colorScheme.primary,

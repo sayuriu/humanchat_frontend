@@ -41,22 +41,30 @@ class Channel extends HiveObject {
 
   factory Channel.fromMap(Map<String, dynamic> map) {
     return Channel(
-      channelId: map['channelId'] as BigInt,
+      channelId: BigInt.parse(map['id']),
       name: map['name'] as String,
-      members: List<BigInt>.from(map['members']),
+      members: ((map['members'] ?? []) as List<dynamic>).map((dynamic e) => BigInt.parse(e.toString())).toList(),
     );
   }
 
   String toJson() => json.encode(toMap());
 
-  factory Channel.fromJson(String source) =>
-      Channel.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory Channel.fromJson(String source) {
+    var map = json.decode(source) as Map<String, dynamic>;
+    if (map.isEmpty) {
+      return Channel(channelId: BigInt.zero, name: '', members: []);
+    }
+    if (map['members'] == null) {
+      map['members'] = [];
+    }
+    return Channel.fromMap(map);
+  }
 
   @override
   String toString() => 'Channel(channelId: $channelId, name: $name, members: $members)';
 
   @override
-  bool operator ==(covariant Channel other) {
+  bool operator == (covariant Channel other) {
     if (identical(this, other)) return true;
 
     return other.channelId == channelId && other.name == name && listEquals(other.members, members);

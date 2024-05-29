@@ -1,17 +1,19 @@
 import 'package:get/get.dart';
 import 'package:humanchat_frontend/core/api.dart';
 import 'package:humanchat_frontend/service/cache_service.dart';
-import 'package:humanchat_frontend/utils/throw_error.dart';
+import 'package:humanchat_frontend/service/ws_service.dart';
+import 'package:humanchat_frontend/utils/extract_response.dart';
+import 'package:humanchat_frontend/utils/response_error.dart';
 
 class _AuthConnect extends GetConnect {
-  final cacheService = Get.put(CacheService());
+  final cacheService = Get.find<CacheService>();
 
   Future<bool> checkEmail({required String email}) async {
     final res = await post(AuthEndpoint.checkEmail.value, {
       'email': email
     });
-    hasError(res);
-    return res.body['exists'];
+    throwOnResponseError(res);
+    return extractData(res)['exists'];
   }
 
   Future<String> login({required String email, required String password}) async {
@@ -19,32 +21,30 @@ class _AuthConnect extends GetConnect {
       'email': email,
       'password': password
     });
-    hasError(res);
-    return res.body['accessToken'];
+    throwOnResponseError(res);
+    return extractData(res)['accessToken'];
   }
 
-  Future<String> signUp({required String email, required String username, required String password, String? displayName,}) async {
+  Future<void> signUp({required String email, required String username, required String password, String? displayName,}) async {
     final res = await post(AuthEndpoint.signUp.value, {
       'email': email,
       'username': username,
       'password': password,
       'displayName': displayName
     });
-    hasError(res);
-    return res.body['message'];
+    throwOnResponseError(res);
   }
 
-  Future<String> logout() async {
-    final res = await post(AuthEndpoint.logout.value, null, headers: {
+  Future<void> logout() async {
+    await post(AuthEndpoint.logout.value, null, headers: {
       'Authorization': 'Bearer ${cacheService.token}'
     });
-    return res.body['message'];
   }
 }
 
 class AuthController extends GetxController {
-  final _authConnect = _AuthConnect();
-  final _cacheService = Get.put(CacheService());
+  final _authConnect = Get.put(_AuthConnect());
+  final _cacheService = Get.find<CacheService>();
 
   Future<bool> checkEmail({required String email}) async {
     try {
@@ -73,5 +73,6 @@ class AuthController extends GetxController {
   Future<void> logout() async {
     _cacheService.deleteToken();
     _authConnect.logout();
+    Get.find<WebSocketService>().close();
   }
 }

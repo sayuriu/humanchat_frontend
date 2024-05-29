@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:get/get.dart';
 import 'package:humanchat_frontend/controller/auth_controller.dart';
-import 'package:humanchat_frontend/screens/go.dart';
+import 'package:humanchat_frontend/utils/go.dart';
 import 'package:humanchat_frontend/screens/welcome.dart';
 import 'package:humanchat_frontend/states/sign_up_state.dart';
+import 'package:humanchat_frontend/utils/exceptions/entity_exception.dart';
 import 'package:humanchat_frontend/utils/exceptions/serverside_exception.dart';
-import 'package:humanchat_frontend/utils/exceptions/user_exception.dart';
 import 'package:humanchat_frontend/widgets/error_dialog.dart';
 import 'package:humanchat_frontend/widgets/form_input_field.dart';
 import 'package:humanchat_frontend/utils/validate.dart';
@@ -20,33 +20,57 @@ class SignUpScreenTheSequel extends StatelessWidget {
   final _displayNameController = TextEditingController();
 
   final usernameValid = false.obs;
+  final displayNameValid = false.obs;
   final checking = false.obs;
-  final immediateUsernameErrorMessage = ''.obs;
+  final immediateUsernameErrorMessage = RxnString();
 
-  canContinue() {
-    return usernameValid.value;
+  final lastUsernameInput = ''.obs;
+
+  String? checkUsernameEx(String username) {
+    if (username == lastUsernameInput.value) {
+      return null;
+    }
+    immediateUsernameErrorMessage.value = null;
+    lastUsernameInput.value = username;
+    return validateUsername(username);
   }
 
+  final userNameFocusNode = FocusNode();
+
+  SignUpScreenTheSequel({super.key});
+
+  get _canContinue => usernameValid.value;
+
   _signUp() async {
-    if (!canContinue()) return;
+    if (!_canContinue) return;
     checking.value = true;
     _signUpState.setName(username: _usernameController.text, displayName: _displayNameController.text);
     try {
-      //  await _authController.signUp(
-      //   email: _signUpState.emailObs.value,
-      //   password: _signUpState.passwordObs.value,
-      //   username: _signUpState.usernameObs.value,
-      //   displayName: _signUpState.displayNameObs.value
-      // );
-    } on UserException catch (e) {
+      await _authController.signUp(
+        email: _signUpState.emailObs.value,
+        password: _signUpState.passwordObs.value,
+        username: _signUpState.usernameObs.value,
+        displayName: _signUpState.displayNameObs.value
+      );
+    } on ClientSideException catch (e) {
       if (e.statusCode == 400) {
         immediateUsernameErrorMessage.value = e.message;
         usernameValid.value = false;
+        userNameFocusNode.requestFocus();
       }
+      checking.value = false;
+      return;
     } on ServersideException catch (e, _) {
       Get.dialog(ErrorDialog(message: e.message, additionalInformation: '(${e.statusCode.toString()}) ${e.message}'));
+      checking.value = false;
+      return;
+    } catch (e) {
+      Get.dialog(ErrorDialog(message: 'Critical error.', additionalInformation: e.toString()));
+      checking.value = false;
+      return;
     }
     checking.value = false;
+    _signUpState.completedObs.value = true;
     Get.dialog(AlertDialog(
       title: const Text('Sign up sucessful'),
       content: const Text('You will now be redirected to the welcome screen.'),
@@ -94,24 +118,23 @@ class SignUpScreenTheSequel extends StatelessWidget {
               Obx(() => FormInputField(
                   controller: _usernameController,
                   label: 'Username',
+                  focusNode: userNameFocusNode,
+                  validator:  validateWithReactive(usernameValid, checkUsernameEx),
+                  errorMessage: immediateUsernameErrorMessage.value,
                   icon: const Icon(Icons.person),
-                  // description: '',
-                  validator:  validateWithReactive(usernameValid, validateUsername),
-                  errorMessage: immediateUsernameErrorMessage.value.isEmpty
-                    ? null
-                    : immediateUsernameErrorMessage.value,
               )),
               FormInputField(
                   controller: _displayNameController,
                   label: 'Display name',
-                  icon: const Icon(Icons.card_membership),
-                  description: 'Optional'
+                  description: 'Optional',
+                  validator: validateWithReactive(displayNameValid, validateDisplayName),
+                  icon: const Icon(Icons.card_membership)
               ),
               const Gap(24),
               Obx(() =>
                 InteractiveButton(
                   onPressed: _signUp,
-                  disabled: !canContinue(),
+                  disabled: !_canContinue || checking.value,
                   label: 'Continue',
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   textColor: Colors.white,

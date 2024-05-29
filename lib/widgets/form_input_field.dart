@@ -15,6 +15,8 @@ class FormInputField extends StatefulWidget {
   late final OutlineInputBorder errorBorder;
   late final String? errorMessage;
   final bool disabled;
+  final bool autofocus;
+  final FocusNode? focusNode;
 
   FormInputField({
     super.key,
@@ -29,6 +31,8 @@ class FormInputField extends StatefulWidget {
     this.disabled = false,
     this.errorMessage,
     this.isPassword = false,
+    this.autofocus = false,
+    this.focusNode,
   }) {
     this.border = border ?? OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
@@ -79,6 +83,8 @@ class _FormInputFieldState extends State<FormInputField> {
       child: TextField(
         readOnly: widget.disabled,
         controller: controller,
+        autofocus: widget.autofocus,
+        focusNode: widget.focusNode,
         decoration: InputDecoration(
           counterText: widget.description,
           icon: widget.icon != null ? Icon(

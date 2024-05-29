@@ -58,21 +58,32 @@ class Message extends HiveObject {
 
   factory Message.fromMap(Map<String, dynamic> map) {
     return Message(
-      messageId: map['messageId'] as BigInt,
-      author: map['author'] as BigInt,
-      replyTo: map['replyTo'] != null ? map['replyTo'] as BigInt : null,
-      channel: map['channel'] as BigInt,
+      messageId: BigInt.from(map['messageId']),
+      author: BigInt.from(map['author']),
+      replyTo: map['replyTo'] != null ? BigInt.from(map['replyTo']) : null,
+      channel: BigInt.from(map['channel']),
       content: map['content'] as String,
       lastEdit: map['lastEdit'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['lastEdit'] as int)
+          ? DateTime.fromMillisecondsSinceEpoch(map['lastEdit'])
           : null,
     );
   }
 
   String toJson() => json.encode(toMap());
 
-  factory Message.fromJson(String source) =>
-      Message.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory Message.fromJson(String source) {
+    var decoded = json.decode(source);
+    return Message(
+      messageId: BigInt.from(decoded['messageId']),
+      author: BigInt.from(decoded['author']),
+      replyTo: decoded['replyTo'] != null ? BigInt.from(decoded['replyTo']) : null,
+      channel: BigInt.from(decoded['channel']),
+      content: decoded['content'],
+      lastEdit: decoded['lastEdit'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(decoded['lastEdit'])
+          : null,
+    );
+  }
 
   @override
   String toString() {

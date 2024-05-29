@@ -27,6 +27,16 @@ String? validateUsername(String username) {
   if (!GetUtils.isUsername(username)) {
     return 'Invalid username';
   }
+  if (username.length > 32) {
+    return 'At most 32 characters allowed';
+  }
+  return null;
+}
+
+String? validateDisplayName(String displayName) {
+  if (displayName.length > 32) {
+    return 'At most 32 characters allowed';
+  }
   return null;
 }
 
